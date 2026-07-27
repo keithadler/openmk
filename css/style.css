@@ -1,0 +1,561 @@
+/* OpenMK - stylesheet (GPL-3.0), adapted from OpenDX7 */
+/* Copyright (c) 2026 Keith Adler */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #111;
+  color: #ccc;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Scroll area ── */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 12px;
+}
+.scroll-area::-webkit-scrollbar { width: 6px; }
+.scroll-area::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+/* ── Header ── */
+.header-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+.brand {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px; font-weight: 700;
+  color: #999; letter-spacing: 2px;
+  white-space: nowrap;
+}
+.brand span { color: #fff; }
+.credit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: #555;
+  white-space: nowrap; margin-left: auto;
+}
+
+.patch-controls { display: flex; gap: 4px; align-items: center; flex: 1; }
+.patch-controls select {
+  background: #000; color: #4f4;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; border: 1px solid #333;
+  padding: 4px 8px; border-radius: 3px;
+  min-width: 200px; flex: 1; max-width: 320px;
+}
+.patch-nav {
+  background: #222; color: #aaa;
+  border: 1px solid #444; padding: 4px 10px;
+  border-radius: 3px; cursor: pointer;
+  font-size: 12px; font-weight: 700;
+}
+.patch-nav:hover { background: #333; color: #fff; }
+.patch-controls button {
+  background: #222; color: #aaa;
+  border: 1px solid #444; padding: 4px 10px;
+  border-radius: 3px; cursor: pointer;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 1px; white-space: nowrap;
+}
+.patch-controls button:hover { background: #333; color: #fff; }
+.patch-controls .panic { color: #f66; border-color: #f66; }
+.patch-controls .panic:hover { background: #f66; color: #000; }
+.demo-select {
+  background: #1a2a1a; color: #6c6;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; border: 1px solid #3a5a3a;
+  padding: 4px 6px; border-radius: 3px; cursor: pointer;
+}
+
+/* ── Panels ── */
+.panels {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.panel {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  padding: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.panel.wide { flex: 2.5; }
+.panel.compact { padding: 8px; }
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  color: #888; letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #2a2a2a;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.panel-title .sub {
+  font-weight: 400;
+  font-size: 10px;
+  color: #555;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Algorithm ── */
+.algo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.lcd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px; font-weight: 700;
+  color: #4f4; background: #000;
+  padding: 1px 12px; border: 1px solid #333;
+  border-radius: 3px; text-align: center;
+  min-width: 42px;
+}
+.nav-btn {
+  background: #222; color: #aaa;
+  border: 1px solid #444; padding: 2px 8px;
+  border-radius: 3px; cursor: pointer;
+  font-size: 12px;
+}
+.nav-btn:hover { background: #333; color: #fff; }
+
+#algo-canvas {
+  width: 100%; height: auto;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+
+/* ── Operator tabs ── */
+.op-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.op-tab {
+  width: 24px; height: 20px;
+  background: #222; color: #666;
+  border: 1px solid #333;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.op-tab.active { background: #4af; color: #000; border-color: #4af; }
+.op-tab:hover:not(.active) { background: #2a2a2a; color: #aaa; }
+
+/* ── Envelope canvas ── */
+#env-canvas, #pitch-env-canvas {
+  width: 100%; height: auto;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+
+/* ── Operator layout ── */
+.op-layout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.op-group {
+  border: 1px solid #222;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: #141414;
+}
+.op-level-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  border-color: #1a3a1a;
+  background: #0a1a0a;
+}
+.op-env-group { flex: 2; }
+.op-freq-group { flex: 1.2; }
+.group-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.op-mode-row { display: flex; gap: 4px; }
+.mode-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; font-weight: 700;
+  color: #888; background: #1a1a1a;
+  border: 1px solid #333; border-radius: 3px;
+  padding: 2px 6px; cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.mode-btn:hover { color: #ccc; border-color: #555; }
+.mode-btn.active { color: #4af; border-color: #4af; background: #0a1a2a; }
+.op-tab.muted { opacity: 0.3; text-decoration: line-through; }
+
+/* ── Voice name in header ── */
+.voice-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: #4f4;
+  background: #000; border: 1px solid #333;
+  padding: 4px 6px; border-radius: 3px;
+  width: 100px; text-transform: uppercase;
+}
+.voice-name:focus { outline: 1px solid #4af; }
+
+/* ── Param rows ── */
+.param-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.param {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.param-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #777;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+}
+.spacer { width: 8px; }
+
+/* ── SVG Knobs ── */
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.knob svg { display: block; }
+.knob-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #999;
+  text-align: center;
+  margin-top: 0px;
+  pointer-events: none;
+}
+
+.sel {
+  background: #111; color: #aaa;
+  border: 1px solid #333;
+  padding: 3px 6px; border-radius: 3px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Visualizer ── */
+#waveform-canvas {
+  width: 100%; height: auto;
+  background: #000;
+  border: 1px solid #222;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+
+/* ── Output stats ── */
+.output-stats { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.stat-row { display: flex; align-items: center; gap: 6px; }
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; color: #3a6a9a; letter-spacing: 1px;
+  width: 38px; flex-shrink: 0;
+}
+.stat-meter {
+  flex: 1; height: 8px; background: #0a1220;
+  border: 1px solid #1a3050; border-radius: 2px; overflow: hidden;
+}
+.stat-fill {
+  height: 100%; width: 0%; border-radius: 1px;
+  transition: width 0.08s;
+}
+.peak-fill { background: linear-gradient(90deg, #1a5a3a, #2a8a4a, #cc0, #c22); }
+.rms-fill { background: linear-gradient(90deg, #1a3a6a, #2a6aaa, #4af); }
+.stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: #4a7aaa; width: 48px; text-align: right;
+}
+
+/* ── Voice dots ── */
+.voice-row { display: flex; align-items: center; gap: 6px; }
+.voice-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+.voice-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #0a1220; border: 1px solid #1a3050;
+  transition: background 0.1s;
+}
+.voice-dot.active { background: #4af; border-color: #4af; box-shadow: 0 0 4px #4af4; }
+
+/* ── Detected (Chord / Key) panel ── */
+.chord-panel {
+  background: #0a1428 !important;
+  border-color: #152a4a !important;
+}
+.chord-panel .panel-title { color: #4a8ad4; border-bottom-color: #152a4a; }
+.detect-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+}
+.detect-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: #3a5a8a;
+  letter-spacing: 1px;
+  width: 60px;
+  flex-shrink: 0;
+}
+.detect-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  color: #8cf;
+  line-height: 1.1;
+}
+.next-row { border-top: 1px solid #152a4a; padding-top: 6px; margin-top: 4px; }
+.detect-next {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: #5a8aba;
+  letter-spacing: 1px;
+}
+.next-chord { margin-right: 12px; }
+
+/* ── Keyboard dock — full width, fixed bottom ── */
+.keyboard-dock {
+  flex-shrink: 0;
+  background: #0a0a0a;
+  border-top: 2px solid #333;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+  display: flex;
+}
+.keyboard-dock webaudio-keyboard {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Performance strip (pitch bend + mod wheel) ── */
+.perf-strip {
+  display: flex;
+  gap: 6px;
+  padding: 8px 8px 8px 10px;
+  background: #111;
+  border-right: 1px solid #333;
+  flex-shrink: 0;
+  line-height: normal;
+}
+.wheel-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 32px;
+}
+.wheel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7px; font-weight: 700;
+  color: #666; letter-spacing: 1px;
+}
+.wheel-track {
+  position: relative;
+  width: 24px;
+  flex: 1;
+  background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.wheel-center-mark {
+  position: absolute;
+  top: 50%; left: 2px; right: 2px;
+  height: 1px;
+  background: #444;
+  pointer-events: none;
+}
+.wheel-thumb {
+  position: absolute;
+  left: 2px; right: 2px;
+  height: 18px;
+  background: linear-gradient(180deg, #555, #333);
+  border: 1px solid #666;
+  border-radius: 3px;
+  pointer-events: none;
+  bottom: 50%;
+  transform: translateY(50%);
+}
+.mod-track .wheel-thumb {
+  bottom: 0;
+  transform: none;
+}
+
+/* ── FX panel — blue tint to distinguish from DX7 emulation ── */
+.fx-custom {
+  background: #0f1a2a !important;
+  border-color: #1a3050 !important;
+}
+.fx-custom .panel-title {
+  color: #5a9fd4;
+  border-bottom-color: #1a3050;
+}
+.fx-custom .panel-title .sub { color: #3a6a9a; }
+.fx-custom .panel-title em { color: #5a9fd4; font-style: italic; }
+.fx-custom .param-label { color: #4a7aaa; }
+
+/* ── FX preset selector ── */
+.fx-select {
+  width: 100%;
+  background: #0a1220;
+  color: #7ab;
+  border: 1px solid #1a3050;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.fx-select:focus { outline: 1px solid #4af; }
+.fx-desc {
+  font-size: 11px;
+  color: #4a7a9a;
+  line-height: 1.4;
+  padding: 4px 2px;
+}
+
+/* ============ OpenEP additions ============ */
+.small-lcd { font-size: 13px; padding: 6px 10px; }
+.rom-status {
+  font-family: monospace; font-size: 12px; color: #8fc;
+  background: #0a0f0a; border: 1px solid #253; border-radius: 4px;
+  padding: 8px 10px; margin-bottom: 8px;
+}
+.rom-drop {
+  border: 2px dashed #468; border-radius: 6px; padding: 14px;
+  text-align: center; color: #9bd; cursor: pointer; margin-bottom: 8px;
+}
+.rom-drop:hover { background: rgba(70, 130, 180, 0.1); }
+.rom-drop p { margin: 4px 0; font-size: 13px; }
+.rom-hint { font-family: monospace; font-size: 11px; color: #78a; }
+.rom-note { font-size: 11px; color: #667; line-height: 1.5; }
+.rom-note a { color: #4af; }
+
+/* ============ Modern skin + JS-driven FX ============ */
+:root { --fx-level: 0; }
+
+/* Ambient drifting background */
+body::before {
+  content: '';
+  position: fixed; inset: -50%;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(50, 110, 220, 0.14), transparent 42%),
+    radial-gradient(circle at 72% 78%, rgba(130, 70, 220, 0.10), transparent 46%);
+  animation: fx-drift 26s ease-in-out infinite alternate;
+  pointer-events: none; z-index: 0;
+}
+@keyframes fx-drift {
+  to { transform: translate(4%, -3%) scale(1.1) rotate(1.5deg); }
+}
+#app { position: relative; z-index: 1; }
+
+/* Glassy panels with hover lift */
+.panel {
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.panel:hover {
+  transform: translateY(-2px);
+  border-color: rgba(80, 170, 255, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* Gradient brand with audio-reactive glow */
+.brand, .brand span {
+  background: linear-gradient(92deg, #8fcaff, #4af 45%, #a58bff);
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+}
+.brand {
+  filter: drop-shadow(0 0 calc(var(--fx-level) * 14px) rgba(80, 170, 255, 0.9));
+  transition: filter 0.08s linear;
+}
+
+/* Header accent line breathes with the audio */
+.header-bar {
+  background: rgba(20, 22, 28, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(80, 170, 255, calc(0.18 + var(--fx-level) * 0.6));
+}
+
+/* LCDs glow with the signal */
+.lcd {
+  box-shadow:
+    inset 0 0 12px rgba(0, 255, 120, 0.07),
+    0 0 calc(var(--fx-level) * 18px) rgba(0, 255, 120, 0.35);
+  transition: box-shadow 0.08s linear;
+}
+
+/* Controls: rounded, tactile */
+select, .mode-btn, .patch-nav, .panic {
+  border-radius: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.mode-btn:hover, .patch-nav:hover, .panic:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.mode-btn:active, .patch-nav:active { transform: translateY(0); }
+
+/* Meters ease instead of jumping */
+.stat-fill { transition: width 0.09s linear; }

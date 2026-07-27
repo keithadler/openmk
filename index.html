@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<!-- OpenMK - SA-synthesis electric piano (GPL-3.0) -->
+<!-- Engine: librdpiano by Giulio Zausa. Shell by Keith Adler. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenMK - Electric Piano</title>
+  <script src="https://g200kg.github.io/webaudio-controls/webaudio-controls.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <div class="header-bar">
+      <div class="brand">Open<span>MK</span></div>
+      <div class="patch-controls">
+        <button id="patch-prev" class="patch-nav" title="Previous sound">◀</button>
+        <select id="patch-select"></select>
+        <button id="patch-next" class="patch-nav" title="Next sound">▶</button>
+        <select id="demo-select" class="demo-select">
+          <option value="">▶ Demo</option>
+          <option value="midi/gymnopedie1.mid" data-patch="8">Gymnopédie No. 1 · MK-80 Classic</option>
+          <option value="midi/solace.mid" data-patch="9">Solace · MK-80 Special</option>
+          <option value="midi/raindrop-prelude.mid" data-patch="0">Raindrop Prelude · Piano 1</option>
+          <option value="midi/prelude-e-minor.mid" data-patch="11">Prelude in E minor · MK-80 Contemporary</option>
+          <option value="midi/bach-prelude-c.mid" data-patch="3">Bach Prelude in C · Harpsichord</option>
+          <option value="midi/maple-leaf-rag.mid" data-patch="14">Maple Leaf Rag · MK-80 Clavi</option>
+          <option value="midi/entertainer.mid" data-patch="6">The Entertainer · E-Piano 1</option>
+          <option value="midi/prelude-a-major.mid" data-patch="5">Prelude in A · Vibraphone</option>
+        </select>
+        <button id="panic-btn" class="panic">PANIC</button>
+      </div>
+      <div class="credit">by Keith Adler</div>
+    </div>
+
+    <div class="scroll-area">
+      <div class="panels">
+
+        <div class="panel compact">
+          <div class="panel-title">Sound</div>
+          <div class="lcd" id="patch-name">loading...</div>
+          <div class="param-row">
+            <div class="param">
+              <div class="knob" id="volume-knob" data-min="0" data-max="100" data-value="80" data-color="#4f4" data-size="48"></div>
+              <div class="param-label">Volume</div>
+            </div>
+            <div class="param">
+              <div class="lcd small-lcd" id="rate-display">20 kHz</div>
+              <div class="param-label">Native Rate</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel compact">
+          <div class="panel-title">Chorus</div>
+          <div class="param-row">
+            <div class="param">
+              <button class="mode-btn" id="chorus-btn" title="Chorus on/off">OFF</button>
+            </div>
+            <div class="param">
+              <div class="knob" id="chorus-rate" data-min="1" data-max="15" data-value="6" data-color="#4af" data-size="48"></div>
+              <div class="param-label">Rate</div>
+            </div>
+            <div class="param">
+              <div class="knob" id="chorus-depth" data-min="0" data-max="15" data-value="8" data-color="#f84" data-size="48"></div>
+              <div class="param-label">Depth</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Row 2: Output + Detected -->
+      <div class="panels">
+        <div class="panel fx-custom compact">
+          <div class="panel-title">Output</div>
+          <canvas id="waveform-canvas" width="220" height="50"></canvas>
+          <div class="output-stats">
+            <div class="stat-row">
+              <span class="stat-label">PEAK</span>
+              <div class="stat-meter"><div class="stat-fill peak-fill" id="peak-fill"></div></div>
+              <span class="stat-val" id="peak-db">-∞ dB</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">RMS</span>
+              <div class="stat-meter"><div class="stat-fill rms-fill" id="rms-fill"></div></div>
+              <span class="stat-val" id="rms-db">-∞ dB</span>
+            </div>
+          </div>
+          <div class="voice-row">
+            <span class="stat-label">VOICES</span>
+            <div class="voice-dots" id="voice-dots"></div>
+          </div>
+        </div>
+
+        <div class="panel chord-panel compact">
+          <div class="panel-title">Detected</div>
+          <div class="detect-row">
+            <span class="detect-label">CHORD</span>
+            <span class="detect-value" id="chord-display">—</span>
+          </div>
+          <div class="detect-row">
+            <span class="detect-label">KEY</span>
+            <span class="detect-value" id="key-value">—</span>
+          </div>
+          <div class="detect-row next-row">
+            <span class="detect-label">NEXT</span>
+            <span class="detect-next" id="next-chords">—</span>
+          </div>
+        </div>
+
+        <div class="panel fx-custom compact">
+          <div class="panel-title">Effects</div>
+          <select id="fx-preset" class="fx-select">
+            <option value="dry">Dry (No Effects)</option>
+            <option value="small-room" selected>Small Room</option>
+            <option value="studio">Studio</option>
+            <option value="concert-hall">Concert Hall</option>
+            <option value="cathedral">Cathedral</option>
+            <option value="plate">Plate Reverb</option>
+            <option value="slapback">Slapback Echo</option>
+            <option value="tape-delay">Tape Delay</option>
+            <option value="ping-pong">Ping Pong Delay</option>
+            <option value="ambient">Ambient Wash</option>
+            <option value="80s-shimmer">80s Shimmer</option>
+            <option value="spring">Spring Reverb</option>
+          </select>
+          <div class="fx-desc" id="fx-desc">Tight, intimate room. Great for electric pianos.</div>
+        </div>
+
+        <div class="panel wide compact">
+          <div class="panel-title">ROMs</div>
+          <div class="rom-status" id="rom-status">Loading ROM images...</div>
+          <div class="rom-drop" id="rom-drop" hidden>
+            <p>Automatic download failed. Drop the ROM files here, or click to pick them.</p>
+            <p class="rom-hint">Files needed: <span id="rom-missing"></span></p>
+            <input type="file" id="rom-files" multiple hidden>
+          </div>
+          <div class="rom-note">ROM images are fetched at runtime from the
+            <a href="https://github.com/giulioz/rdpiano" target="_blank" rel="noopener">rdpiano</a>
+            project and cached in your browser. OpenMK ships no ROM data.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="keyboard-dock" id="keyboard-dock">
+      <div class="perf-strip">
+        <div class="wheel-group">
+          <div class="wheel-label">BEND</div>
+          <div class="wheel-track" id="pitch-bend-track">
+            <div class="wheel-center-mark"></div>
+            <div class="wheel-thumb" id="pitch-bend-thumb"></div>
+          </div>
+        </div>
+        <div class="wheel-group">
+          <div class="wheel-label">MOD</div>
+          <div class="wheel-track mod-track" id="mod-wheel-track">
+            <div class="wheel-thumb" id="mod-wheel-thumb" style="bottom:0"></div>
+          </div>
+        </div>
+      </div>
+      <webaudio-keyboard id="keyboard" keys="76" min="21" height="200"
+        colors="#222;#f8f8f8;#ddd;#333;#111;#6af;#48d;#46a;#238"></webaudio-keyboard>
+    </div>
+
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
