@@ -2,6 +2,8 @@
 
 A browser-based SA-synthesis electric piano. No plugins, no installs - just open and play.
 
+### ▶ [Play now](https://keithadler.github.io/openmk/)
+
 OpenMK runs the [rdpiano](https://github.com/giulioz/rdpiano) emulator by Giulio Zausa, compiled to WebAssembly inside an AudioWorklet. rdpiano is a silicon-level emulation of the CPU-B board used in the Roland RD-1000, MKS-20, and Rhodes MK-80 digital pianos: the HD6301 microcontroller and the custom SA sound chip, both reverse engineered from decapped chips.
 
 Companion project to [OpenDX7](https://github.com/keithadler/opendx7).
