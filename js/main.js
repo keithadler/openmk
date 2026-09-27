@@ -20,6 +20,7 @@ const DEFAULT_PATCH = 8; // MK-80 Classic
 let audioCtx = null;
 let epNode = null;
 let gainNode = null;
+let playerVolume = 1;   // CC 7 out of a demo file, folded into the knob
 let engineReady = false;
 let romGroups = null;
 let currentPatch = DEFAULT_PATCH;
@@ -78,7 +79,7 @@ async function initAudioGraph() {
   limiter.release.value = 0.05;
 
   gainNode = audioCtx.createGain();
-  gainNode.gain.value = parseFloat($('volume-knob').dataset.value) / 100;
+  applyGain();
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 2048;
   analyserData = new Float32Array(analyser.fftSize);
@@ -278,6 +279,12 @@ function startViz() {
   })();
 }
 
+function applyGain() {
+  if (!gainNode) return;
+  const knob = parseFloat($('volume-knob').dataset.value) / 100;
+  gainNode.gain.value = knob * playerVolume;
+}
+
 function setPatch(index) {
   currentPatch = ((index % 16) + 16) % 16;
   $('patch-select').value = String(currentPatch);
@@ -338,36 +345,66 @@ function setupRomDrop() {
 }
 
 // ============================================================
-// Wheels (pitch bend snaps to center, mod stays)
+// Damper pedal
+//
+// There used to be a bend wheel and a mod wheel here. They never did
+// anything, for anybody, and that is not a bug in the browser or in the
+// wiring: the CPU-B board has no wheel input. rdpiano injects commands by
+// watching the firmware's program counter and putting a byte on the internal
+// data bus, and the only commands anybody has reverse engineered off the
+// silicon are note on, note off, program change and damper. Pitch bend and
+// CC 1 fell off the end of that if/else chain and were dropped in silence.
+//
+// Bending it from out here, by resampling the output, would bend notes that
+// are already sounding in a way the hardware cannot, in a project whose whole
+// claim is that it is the hardware. So the wheels are gone and the damper,
+// which the board really does honor, is what the strip holds.
 // ============================================================
-function setupWheels() {
-  const pbTrack = $('pitch-bend-track'), pbThumb = $('pitch-bend-thumb');
-  const mwTrack = $('mod-wheel-track'), mwThumb = $('mod-wheel-thumb');
-  let pbDragging = false, mwDragging = false;
+const DAMPER_CC = 64;
+let showDamper = null;   // set by setupDamper; lets a hardware pedal move the drawn one
 
-  function setPitchBend(norm) {
-    const c = Math.max(0, Math.min(1, norm));
-    pbThumb.style.bottom = `calc(${c * 100}% - 9px)`;
-    pbThumb.style.transform = 'none';
-    const v = Math.round(c * 16383);
-    sendMidi(0xE0, v & 0x7f, (v >> 7) & 0x7f);
+function setupDamper() {
+  const pedal = $('damper-pedal'), lock = $('damper-lock');
+  let held = false, locked = false;
+
+  // A hardware pedal moves this one, without echoing the CC back to the engine.
+  showDamper = (down) => pedal.setAttribute('aria-pressed', String(down || locked));
+
+  function apply() {
+    const down = held || locked;
+    if (down === (pedal.getAttribute('aria-pressed') === 'true')) return;
+    pedal.setAttribute('aria-pressed', String(down));
+    sendMidi(0xB0, DAMPER_CC, down ? 127 : 0);
   }
-  function setModWheel(norm) {
-    const c = Math.max(0, Math.min(1, norm));
-    mwThumb.style.bottom = (c * 100) + '%';
-    sendMidi(0xB0, 1, Math.round(c * 127));
-  }
-  const trackY = (track, y) => 1 - (y - track.getBoundingClientRect().top) / track.getBoundingClientRect().height;
+  async function press(v) { if (v) await ensureAudio(); held = v; apply(); }
 
-  pbTrack.addEventListener('pointerdown', (e) => { pbDragging = true; pbTrack.setPointerCapture(e.pointerId); setPitchBend(trackY(pbTrack, e.clientY)); });
-  pbTrack.addEventListener('pointermove', (e) => { if (pbDragging) setPitchBend(trackY(pbTrack, e.clientY)); });
-  pbTrack.addEventListener('pointerup', () => { pbDragging = false; setPitchBend(0.5); });
-  pbTrack.addEventListener('pointercancel', () => { pbDragging = false; setPitchBend(0.5); });
+  pedal.addEventListener('pointerdown', async (e) => {
+    // Press first. Capture is a convenience, so that sliding off the button
+    // still releases, and it must not be able to swallow the pedal if it
+    // throws: a stuck-up damper is worse than a missed release.
+    await press(true);
+    try { pedal.setPointerCapture(e.pointerId); } catch { /* no capture; pointerup still fires */ }
+  });
+  pedal.addEventListener('pointerup', () => press(false));
+  pedal.addEventListener('pointercancel', () => press(false));
 
-  mwTrack.addEventListener('pointerdown', (e) => { mwDragging = true; mwTrack.setPointerCapture(e.pointerId); setModWheel(trackY(mwTrack, e.clientY)); });
-  mwTrack.addEventListener('pointermove', (e) => { if (mwDragging) setModWheel(trackY(mwTrack, e.clientY)); });
-  mwTrack.addEventListener('pointerup', () => { mwDragging = false; });
-  mwTrack.addEventListener('pointercancel', () => { mwDragging = false; });
+  lock.addEventListener('click', async () => {
+    locked = !locked;
+    lock.setAttribute('aria-pressed', String(locked));
+    if (locked) await ensureAudio();
+    apply();
+  });
+
+  // Space bar is the pedal, the way it is on every other keyboard instrument.
+  document.addEventListener('keydown', async (e) => {
+    if (e.code !== 'Space' || e.repeat) return;
+    if (['SELECT', 'INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+    e.preventDefault();
+    await press(true);
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') press(false);
+  });
 }
 
 // ============================================================
@@ -381,18 +418,27 @@ async function setupMidi() {
       port.onmidimessage = async (e) => {
         const [st, d1, d2] = e.data;
         const type = st & 0xf0;
-        if (type === 0x90 || type === 0x80 || type === 0xB0 || type === 0xE0 || type === 0xD0) {
-          await ensureAudio();
-          const kbd = $('keyboard');
-          if (type === 0x90 && d2 > 0) {
-            noteOn(d1, d2);
-            kbd?.setNote?.(1, d1);
-          } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
-            noteOff(d1);
-            kbd?.setNote?.(0, d1);
-          } else {
-            sendMidi(st, d1 || 0, d2 || 0);
-          }
+
+        // Only what the board honors. Bend (0xE0) and aftertouch (0xD0) used to
+        // be forwarded here and were then dropped further down, which looked
+        // like support and was not any. Leaving them out is the honest version.
+        if (type !== 0x90 && type !== 0x80 && type !== 0xB0 && type !== 0xC0) return;
+
+        await ensureAudio();
+        const kbd = $('keyboard');
+
+        if (type === 0x90 && d2 > 0) {
+          noteOn(d1, d2);
+          kbd?.setNote?.(1, d1);
+        } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
+          noteOff(d1);
+          kbd?.setNote?.(0, d1);
+        } else if (type === 0xC0) {
+          // The board does take program change; this page never sent it one.
+          setPatch(d1 & 0x0f);
+        } else if (d1 === DAMPER_CC) {
+          sendMidi(0xB0, DAMPER_CC, d2);
+          showDamper?.(d2 >= 64);
         }
       };
     };
@@ -505,8 +551,8 @@ function setupUi() {
   document.addEventListener('input', (e) => {
     const el = e.target;
     if (!el.classList || !el.classList.contains('knob')) return;
-    if (el.id === 'volume-knob' && gainNode) {
-      gainNode.gain.value = parseFloat(el.dataset.value) / 100;
+    if (el.id === 'volume-knob') {
+      applyGain();
     } else if (el.id === 'chorus-rate' || el.id === 'chorus-depth') {
       sendChorus();
     }
@@ -515,15 +561,23 @@ function setupUi() {
   midiPlayer = new MidiPlayer(
     (note, vel) => { noteOn(note, vel); kbd?.setNote?.(1, note); },
     (note) => { noteOff(note); kbd?.setNote?.(0, note); },
-    (cc, value) => sendMidi(0xB0, cc, value),
+    (cc, value) => {
+      // The board honors the damper and nothing else, so the rest of a file's
+      // controllers vanish here. CC 7 is worth keeping: it is a mixer level,
+      // not a synthesis parameter, and three of the demos automate their
+      // dynamics with it. Dropping it was playing the Gymnopedie flat.
+      if (cc === DAMPER_CC) { sendMidi(0xB0, DAMPER_CC, value); showDamper?.(value >= 64); }
+      else if (cc === 7)    { playerVolume = value / 127; applyGain(); }
+    },
   );
   $('demo-select').addEventListener('change', async function () {
-    if (!this.value) { midiPlayer.stop(); return; }
+    if (!this.value) { midiPlayer.stop(); playerVolume = 1; applyGain(); return; }
     const url = this.value;
     const opt = this.selectedOptions[0];
     this.value = '';
     if (!(await ensureAudio())) return; // no engine yet (ROMs missing / audio failed)
     if (opt?.dataset.patch !== undefined) setPatch(parseInt(opt.dataset.patch, 10));
+    playerVolume = 1; applyGain();   // a file that ended mid fade must not quiet the next one
     await midiPlayer.loadUrl(url);
     midiPlayer.play();
   });
@@ -540,12 +594,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const wC = $('waveform-canvas');
   if (wC) drawGrid(wC.getContext('2d'), wC.width, wC.height, 'WAVEFORM · play a key');
   setupFx();
-  setupWheels();
+  setupDamper();
   setupQwerty();
   setupRomDrop();
   setupMidi();
 
-  // Keyboard sizing: fill the window width next to the wheel strip
+  // Keyboard sizing: fill the window width next to the pedal strip
   function resizeKbd() {
     const kbd = $('keyboard');
     const strip = document.querySelector('.perf-strip');

@@ -380,7 +380,9 @@ body {
   min-width: 0;
 }
 
-/* ── Performance strip (pitch bend + mod wheel) ── */
+/* ── Performance strip (damper pedal) ──
+   The CPU-B board has no wheel input, so there is nothing to draw for bend
+   or mod. What it does honor is the damper, so that is what lives here. */
 .perf-strip {
   display: flex;
   gap: 6px;
@@ -390,49 +392,61 @@ body {
   flex-shrink: 0;
   line-height: normal;
 }
-.wheel-group {
+.pedal-group {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 32px;
+  width: 38px;
 }
-.wheel-label {
+.pedal-label,
+.pedal-lock {
   font-family: 'JetBrains Mono', monospace;
   font-size: 7px; font-weight: 700;
   color: #666; letter-spacing: 1px;
 }
-.wheel-track {
+.pedal {
   position: relative;
-  width: 24px;
+  width: 30px;
   flex: 1;
+  padding: 0;
   background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
   border: 1px solid #333;
-  border-radius: 4px;
-  cursor: ns-resize;
+  border-radius: 4px 4px 7px 7px;
+  cursor: pointer;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
-.wheel-center-mark {
+/* The face rides down the body when the pedal is pressed. */
+.pedal-face {
   position: absolute;
-  top: 50%; left: 2px; right: 2px;
-  height: 1px;
-  background: #444;
+  left: 3px; right: 3px; top: 4px;
+  height: 46%;
+  background: linear-gradient(180deg, #6a6a6a, #3a3a3a);
+  border: 1px solid #777;
+  border-radius: 3px 3px 5px 5px;
   pointer-events: none;
+  transition: transform 60ms ease-out, background 60ms linear;
 }
-.wheel-thumb {
-  position: absolute;
-  left: 2px; right: 2px;
-  height: 18px;
-  background: linear-gradient(180deg, #555, #333);
-  border: 1px solid #666;
+.pedal[aria-pressed="true"] .pedal-face {
+  transform: translateY(70%);
+  background: linear-gradient(180deg, #8fc4ff, #4a83c4);
+  border-color: #9fd0ff;
+}
+.pedal:focus-visible,
+.pedal-lock:focus-visible { outline: 1px solid #6af; outline-offset: 1px; }
+.pedal-lock {
+  background: none;
+  border: 1px solid #333;
   border-radius: 3px;
-  pointer-events: none;
-  bottom: 50%;
-  transform: translateY(50%);
+  padding: 2px 0;
+  width: 100%;
+  cursor: pointer;
 }
-.mod-track .wheel-thumb {
-  bottom: 0;
-  transform: none;
+.pedal-lock[aria-pressed="true"] {
+  color: #9fd0ff;
+  border-color: #4a83c4;
+  background: #16222f;
 }
 
 /* ── FX panel — blue tint to distinguish from DX7 emulation ── */

@@ -1,0 +1,46 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  midi-reach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Every script parses
+        run: for f in js/*.js tests/*.mjs; do node --check "$f" || exit 1; done
+
+      # Does what the page sends actually reach the emulated board? openmk drew
+      # two wheels that were dropped in silence for the life of the project.
+      - name: MIDI reachability
+        run: node tests/midi_reach.mjs
+
+      # The check has to be able to fail, or it is not a check. Put the bug
+      # back and require a red run.
+      - name: The check can fail
+        run: |
+          cp js/main.js /tmp/main.bak
+          sed -i 's|function noteOn(n, v = 100) {|function noteOn(n, v = 100) {\n  sendMidi(0xE0, 0, 64);|' js/main.js
+          if node tests/midi_reach.mjs; then
+            echo "::error::reachability test passed with pitch bend reintroduced; it is vacuous"
+            cp /tmp/main.bak js/main.js
+            exit 1
+          fi
+          cp /tmp/main.bak js/main.js
+          echo "the test goes red on the original bug, as it must"
+
+      - name: No stale ROM fetch
+        run: |
+          if grep -rn 'githubusercontent\|rdpiano/master/roms' js/ index.html; then
+            echo "::error::the page fetches ROM data; it must ask the user for it"
+            exit 1
+          fi
+          echo "no remote ROM fetch"

@@ -22,7 +22,34 @@ Plus the Space D stereo chorus (a BBD approximation, same as the rdpiano plugin)
 
 - **MIDI**: plug in a keyboard, it just works (Chrome/Edge)
 - **Computer keys**: A-L rows play notes, Z-M row plays the lower octave
-- **On-screen**: click the keyboard, drag the bend and mod wheels
+- **Damper**: hold the pedal in the left strip, or hold the space bar, or use a
+  real sustain pedal. LOCK keeps it down.
+- **On-screen**: click the keyboard
+
+### There are no wheels, and that is the hardware
+
+The CPU-B board is a sound engine, not a whole instrument. rdpiano gets commands
+into it by watching the firmware's program counter and putting a byte on the
+internal data bus, and the commands anybody has read off the decapped silicon
+are note on, note off, program change and damper. That is the whole vocabulary.
+
+openmk used to draw a bend wheel and a mod wheel anyway. They moved, they sent
+0xE0 and CC 1, and `Mcu::sendMidiCmd` has no branch for either, so both fell off
+the end of an if/else chain and were discarded without a word. They had never
+worked, for anyone. Thanks to [@Reaper10](https://github.com/Reaper10) for
+reporting it; he assumed it was his machine, and it was not.
+
+Bending from outside the emulator, by resampling its output, would bend notes
+already sounding in a way the instrument cannot, in a project whose only claim
+is that it is the instrument. So the wheels are gone and the damper, which the
+board really does honor, is what the strip holds. `tests/midi_reach.mjs` reads
+both the C++ and the page and fails if the page ever sends something the board
+would drop again.
+
+Program change now comes through from a MIDI keyboard too, which the board
+always accepted and this page never sent it. And a demo file's CC 7 moves the
+master level instead of vanishing, which is why the Gymnopédie used to play
+without its dynamics.
 
 ## ROMs
 
@@ -81,6 +108,17 @@ Any static server works:
 ```bash
 python3 -m http.server 8472
 ```
+
+## Checks
+
+```bash
+node tests/midi_reach.mjs
+```
+
+It reads `Mcu::sendMidiCmd` for the commands the board handles and the page for
+the messages it sends, and fails if the page sends one the board would drop.
+CI also puts the old pitch bend back and requires the test to go red, because a
+check that cannot fail is not a check.
 
 ## License
 

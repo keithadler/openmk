@@ -148,18 +148,17 @@
 
     <div class="keyboard-dock" id="keyboard-dock">
       <div class="perf-strip">
-        <div class="wheel-group">
-          <div class="wheel-label">BEND</div>
-          <div class="wheel-track" id="pitch-bend-track">
-            <div class="wheel-center-mark"></div>
-            <div class="wheel-thumb" id="pitch-bend-thumb"></div>
-          </div>
-        </div>
-        <div class="wheel-group">
-          <div class="wheel-label">MOD</div>
-          <div class="wheel-track mod-track" id="mod-wheel-track">
-            <div class="wheel-thumb" id="mod-wheel-thumb" style="bottom:0"></div>
-          </div>
+        <!-- The CPU-B board takes note on/off, program change and damper.
+             It has no wheel input, so there are no wheels here. See README. -->
+        <div class="pedal-group">
+          <div class="pedal-label">DAMPER</div>
+          <button class="pedal" id="damper-pedal" type="button"
+                  aria-pressed="false"
+                  title="Damper pedal (MIDI CC 64). Hold it, or hold the space bar. Click the lock below to keep it down.">
+            <span class="pedal-face"></span>
+          </button>
+          <button class="pedal-lock" id="damper-lock" type="button"
+                  aria-pressed="false" title="Keep the damper down">LOCK</button>
         </div>
       </div>
       <webaudio-keyboard id="keyboard" keys="76" min="21" height="200"
