@@ -302,21 +302,22 @@ function setStatus(text) { $('rom-status').textContent = text; }
 // ROM loading
 // ============================================================
 async function bootRoms() {
-  setStatus('Loading ROM images...');
+  setStatus('Looking for your ROM images...');
   const result = await loadRoms((name, i, total) =>
-    setStatus(`Loading ROM images... ${i + 1}/${total} (${name})`));
+    setStatus(`Looking for your ROM images... ${i + 1}/${total} (${name})`));
 
   if (result.missing.length > 0) {
-    setStatus('Some ROM images could not be downloaded.');
+    const n = result.missing.length;
+    setStatus(n === Object.keys(ROM_FILES).length
+      ? 'No ROM images yet. Supply them below to start.'
+      : `${n} ROM image${n === 1 ? '' : 's'} still needed.`);
     $('rom-missing').textContent = result.missing.join(', ');
     $('rom-drop').hidden = false;
     return false;
   }
 
   romGroups = groupRoms(result.roms);
-  const src = result.fromCache === Object.keys(ROM_FILES).length
-    ? 'browser cache' : 'giulioz/rdpiano';
-  setStatus(`ROMs ready (${src}). Click or play a key to start the engine.`);
+  setStatus('ROMs ready, from your browser. Click or play a key to start the engine.');
   return true;
 }
 

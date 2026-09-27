@@ -131,15 +131,16 @@
 
         <div class="panel wide compact">
           <div class="panel-title">ROMs</div>
-          <div class="rom-status" id="rom-status">Loading ROM images...</div>
+          <div class="rom-status" id="rom-status">Looking for your ROM images...</div>
           <div class="rom-drop" id="rom-drop" hidden>
-            <p>Automatic download failed. Drop the ROM files here, or click to pick them.</p>
+            <p>Drop your ROM files here, or click to pick them.</p>
             <p class="rom-hint">Files needed: <span id="rom-missing"></span></p>
             <input type="file" id="rom-files" multiple hidden>
           </div>
-          <div class="rom-note">ROM images are fetched at runtime from the
-            <a href="https://github.com/giulioz/rdpiano" target="_blank" rel="noopener">rdpiano</a>
-            project and cached in your browser. OpenMK ships no ROM data.</div>
+          <div class="rom-note">These are Roland's code and sample data, so you
+            supply them yourself, from an instrument you own. Nothing is
+            downloaded and nothing is uploaded: the files stay in your browser
+            and you only pick them once.</div>
         </div>
 
       </div>

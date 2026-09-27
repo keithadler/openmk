@@ -1,6 +1,7 @@
 # OpenMK
 
-A browser-based SA-synthesis electric piano. No plugins, no installs - just open and play.
+A browser-based SA-synthesis electric piano. No plugins and nothing to install;
+supply the ROM images from an instrument you own and it plays in the page.
 
 ### ▶ [Play now](https://keithadler.github.io/openmk/)
 
@@ -25,9 +26,20 @@ Plus the Space D stereo chorus (a BBD approximation, same as the rdpiano plugin)
 
 ## ROMs
 
-OpenMK ships no ROM data. The ROM images are fetched at runtime from the rdpiano
-repository and cached in your browser (IndexedDB). If the download fails, the app
-shows a drop zone where you can supply the files yourself.
+**You supply the ROM images, from an instrument you own.** OpenMK ships no ROM
+data and downloads none. Drop the files onto the page once and they are kept in
+your browser (IndexedDB); they are never uploaded anywhere.
+
+The twelve files are listed on the page when they are missing. They are Roland's
+own program and sample data, which is why they are not here and not fetched for
+you.
+
+This used to pull them at runtime from another project's repository. OpenMK
+still shipped no ROM bytes itself, which was the careful half of it, but
+arranging for somebody else to serve Roland's data to every visitor is the same
+act at one remove. hexter has always asked you for your own DX7 ROM and
+Nuked-MT32 will not start without an MT-32 ROM you already have; this now asks
+the same.
 
 ## Architecture
 
@@ -35,7 +47,7 @@ shows a drop zone where you can supply the files yourself.
 engine/               C++ sources (vendored librdpiano + Space D chorus + wrapper)
 engine/build.sh       emscripten build -> js/rdpiano.wasm
 js/ep-processor.js    AudioWorklet: hosts the WASM, resamples 20/32 kHz -> context rate
-js/rom-loader.js      runtime ROM fetch + IndexedDB cache + drop-zone fallback
+js/rom-loader.js      user-supplied ROMs + IndexedDB cache
 js/main.js            UI wiring, Web MIDI, QWERTY keys, demo player
 ```
 

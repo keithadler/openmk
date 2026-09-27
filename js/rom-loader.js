@@ -1,9 +1,15 @@
 // OpenMK — ROM loader (GPL-3.0)
-// Fetches the SA-synthesis ROM images at runtime from the rdpiano repository
-// (no ROM bytes ship with OpenMK), caches them in IndexedDB, and falls back
-// to user-supplied files if the remote source is unavailable.
-
-const ROM_BASE = 'https://raw.githubusercontent.com/giulioz/rdpiano/master/roms/';
+//
+// The ROM images are supplied by you and cached in your browser. Nothing is
+// downloaded.
+//
+// This used to fetch them at runtime from someone else's repository, which
+// meant every visitor's browser pulled Roland's firmware and wave data down
+// without being asked and without owning the instrument. OpenMK shipped no
+// ROM bytes itself, which was the careful half of the arrangement, but
+// arranging for somebody else to serve them is the same act at one remove.
+// The other emulators here have always said the same thing: bring your own
+// ROM. This one now says it too.
 
 // filename -> expected size
 export const ROM_FILES = {
@@ -68,16 +74,7 @@ export async function loadRoms(onProgress) {
       continue;
     }
 
-    try {
-      const resp = await fetch(ROM_BASE + name);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      data = await resp.arrayBuffer();
-      if (data.byteLength < ROM_FILES[name]) throw new Error('short file');
-      roms[name] = data;
-      if (db) await dbPut(db, name, data).catch(() => {});
-    } catch (err) {
-      missing.push(name);
-    }
+    missing.push(name);
   }
 
   return { roms, missing, fromCache };
