@@ -52,6 +52,31 @@
           </div>
         </div>
 
+        <div class="panel compact tape-panel">
+          <div class="panel-title">Tape Echo</div>
+          <div class="param-row">
+            <div class="param">
+              <button class="mode-btn" id="tape-btn" title="Tape echo on/off">OFF</button>
+            </div>
+            <div class="param">
+              <div class="knob" id="tape-time" data-min="60" data-max="900" data-value="330" data-color="#fb4" data-size="48"></div>
+              <div class="param-label">Time</div>
+            </div>
+            <div class="param">
+              <div class="knob" id="tape-repeats" data-min="0" data-max="100" data-value="40" data-color="#fb4" data-size="48"></div>
+              <div class="param-label">Repeats</div>
+            </div>
+            <div class="param">
+              <div class="knob" id="tape-mix" data-min="0" data-max="100" data-value="35" data-color="#fb4" data-size="48"></div>
+              <div class="param-label">Mix</div>
+            </div>
+            <div class="param">
+              <div class="knob" id="tape-wear" data-min="0" data-max="100" data-value="40" data-color="#fb4" data-size="48"></div>
+              <div class="param-label">Wear</div>
+            </div>
+          </div>
+        </div>
+
         <div class="panel compact">
           <div class="panel-title">Chorus</div>
           <div class="param-row">
@@ -95,7 +120,9 @@
         </div>
 
         <div class="panel chord-panel compact">
-          <div class="panel-title">Detected</div>
+          <div class="panel-title">Detected
+            <button class="panel-toggle" id="chord-toggle" type="button"
+                    aria-expanded="true" title="Show or hide the chord helper">HIDE</button></div>
           <div class="detect-row">
             <span class="detect-label">CHORD</span>
             <span class="detect-value" id="chord-display">—</span>

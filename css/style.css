@@ -573,3 +573,20 @@ select, .mode-btn, .patch-nav, .panic {
 
 /* Meters ease instead of jumping */
 .stat-fill { transition: width 0.09s linear; }
+
+/* ── Chord helper can be put away ── */
+.chord-panel .panel-title { display: flex; align-items: center; justify-content: space-between; }
+.panel-toggle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  color: #4a8ad4; background: transparent;
+  border: 1px solid #152a4a; border-radius: 6px;
+  padding: 2px 6px; cursor: pointer;
+}
+.panel-toggle:hover { color: #9cf; border-color: #4a8ad4; }
+.chord-panel.collapsed { align-self: flex-start; }
+.chord-panel.collapsed .detect-row { display: none; }
+.chord-panel.collapsed .panel-title { border-bottom: none; margin-bottom: 0; }
+
+/* ── Tape echo ── */
+.tape-panel .panel-title { color: #d9a441; }

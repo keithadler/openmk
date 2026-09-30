@@ -37,6 +37,10 @@ jobs:
           cp /tmp/main.bak js/main.js
           echo "the test goes red on the original bug, as it must"
 
+      # One key, one note; Space is the damper whatever has focus.
+      - name: Computer keys and space bar
+        run: node tests/page_input.mjs
+
       - name: No stale ROM fetch
         run: |
           if grep -rn 'githubusercontent\|rdpiano/master/roms' js/ index.html; then

@@ -34,6 +34,10 @@ let reverbNode = null, reverbGain = null;
 let delayNode = null, delayFbNode = null, delayGain = null;
 let midiPlayer = null;
 
+// Tape echo: a separate unit after the instrument, like a real one on the floor.
+const tapeState = { on: false, time: 330, repeats: 40, mix: 35, wear: 40 };
+let tape = null;   // { input, delay, lp, fb, out, wow, flutter } once audio runs
+
 // Output visualizer
 let analyser = null, analyserData = null;
 
@@ -111,8 +115,10 @@ async function initAudioGraph() {
     lpf.connect(delayFbNode).connect(delayNode);
   } catch (e) { console.warn('Delay:', e); }
 
+  try { tape = buildTapeEcho(masterBus); } catch (e) { console.warn('Tape echo:', e); }
+
   // debug/verification handle
-  window.__openmk = { get ctx() { return audioCtx; }, get node() { return epNode; }, get gain() { return gainNode; } };
+  window.__openmk = { get ctx() { return audioCtx; }, get node() { return epNode; }, get gain() { return gainNode; }, get tape() { return tape; } };
 
   const engineUp = new Promise((resolve, reject) => {
     const bail = setTimeout(() => reject(new Error('engine start timed out')), 20000);
@@ -163,15 +169,100 @@ function updateFx(p, v) {
   else if (p === 'delayFeedback' && delayFbNode) delayFbNode.gain.value = Math.min(0.85, v / 100);
 }
 
+// ============================================================
+// Tape echo
+//
+// The delay in the presets is a clean digital line with a low-pass on it.
+// A tape echo is a different instrument: the loop runs through a record head
+// that saturates, a tape that wobbles slowly (wow) and quickly (flutter), and
+// a playback path that loses top and bottom on every pass, so each repeat is
+// darker, thinner and a little out of tune with the last. That is what this
+// builds, entirely after the emulator: the board still only does what the
+// silicon does.
+//
+//   epNode -> input (0 when off) -> delay -> low cut -> high cut -> saturation -> out -> masterBus
+//                                     ^                                   |
+//                                     +--------------- repeats -----------+
+//
+// Switching it off closes the input and leaves the loop running, so the
+// echoes already on the tape die away instead of stopping dead.
+// ============================================================
+// Unity gain for quiet signals, so Repeats means what it says: normalizing to
+// tanh(k) instead gave the loop a gain of 1.7 and it ran away at half way.
+// Loud repeats squash instead of growing, which is the tape.
+function saturationCurve(k = 1.6) {
+  const n = 1024, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    curve[i] = Math.tanh(k * x) / k;
+  }
+  return curve;
+}
+
+function buildTapeEcho(dest) {
+  const input = audioCtx.createGain();
+  const delay = audioCtx.createDelay(2.0);
+  const hp = audioCtx.createBiquadFilter();
+  const lp = audioCtx.createBiquadFilter();
+  const sat = audioCtx.createWaveShaper();
+  const fb = audioCtx.createGain();
+  const out = audioCtx.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 110; hp.Q.value = 0.5;
+  lp.type = 'lowpass';  lp.Q.value = 0.6;
+  sat.curve = saturationCurve();
+  sat.oversample = '2x';
+
+  // Wow and flutter move the read point, which is what bends the pitch.
+  const wow = { osc: audioCtx.createOscillator(), depth: audioCtx.createGain() };
+  const flutter = { osc: audioCtx.createOscillator(), depth: audioCtx.createGain() };
+  wow.osc.frequency.value = 0.55;
+  flutter.osc.frequency.value = 6.8;
+  wow.osc.connect(wow.depth).connect(delay.delayTime);
+  flutter.osc.connect(flutter.depth).connect(delay.delayTime);
+  wow.osc.start(); flutter.osc.start();
+
+  epNode.connect(input).connect(delay).connect(hp).connect(lp).connect(sat).connect(out).connect(dest);
+  sat.connect(fb).connect(delay);
+
+  const t = { input, delay, lp, fb, out, wow, flutter };
+  applyTape(t, true);
+  return t;
+}
+
+function applyTape(t = tape, instant = false) {
+  if (!t) return;
+  const now = audioCtx.currentTime;
+  const s = tapeState, w = s.wear / 100;
+  const set = (param, v, tc) => instant ? param.setValueAtTime(v, now) : param.setTargetAtTime(v, now, tc);
+  set(t.input.gain, s.on ? 1 : 0, 0.01);
+  // A real one glides when you move the time: the tape speed changes, not a jump.
+  set(t.delay.delayTime, s.time / 1000, 0.12);
+  set(t.fb.gain, (s.repeats / 100) * 0.92, 0.02);
+  set(t.out.gain, s.mix / 100, 0.02);
+  set(t.lp.frequency, 5600 - 3400 * w, 0.02);
+  set(t.wow.depth.gain, 0.0002 + 0.0016 * w, 0.05);
+  set(t.flutter.depth.gain, 0.00002 + 0.00008 * w, 0.05);
+}
+
+function setTapeOn(on) {
+  tapeState.on = on;
+  const btn = $('tape-btn');
+  btn.textContent = on ? 'ON' : 'OFF';
+  btn.classList.toggle('active', on);
+  applyTape();
+}
+
+const TAPE_KNOBS = { 'tape-time': 'time', 'tape-repeats': 'repeats', 'tape-mix': 'mix', 'tape-wear': 'wear' };
+
 const FX_PRESETS = {
-  'dry':          { reverbMix: 0,  reverbDecay: 10, delayMix: 0,  delayTime: 200, delayFeedback: 0,  desc: 'No effects. Pure SA output.' },
+  'dry':          { reverbMix: 0,  reverbDecay: 10, delayMix: 0,  delayTime: 200, delayFeedback: 0,  tape: false, desc: 'No effects. Pure SA output.' },
   'small-room':   { reverbMix: 20, reverbDecay: 12, delayMix: 0,  delayTime: 200, delayFeedback: 0,  desc: 'Tight, intimate room. Great for electric pianos.' },
   'studio':       { reverbMix: 25, reverbDecay: 22, delayMix: 15, delayTime: 340, delayFeedback: 25, desc: 'Balanced reverb + subtle delay. Good for everything.' },
   'concert-hall': { reverbMix: 40, reverbDecay: 45, delayMix: 8,  delayTime: 500, delayFeedback: 20, desc: 'Large hall with long tail. Beautiful for ballads.' },
   'cathedral':    { reverbMix: 55, reverbDecay: 70, delayMix: 5,  delayTime: 600, delayFeedback: 15, desc: 'Massive space with very long decay. Ethereal.' },
   'plate':        { reverbMix: 35, reverbDecay: 18, delayMix: 0,  delayTime: 200, delayFeedback: 0,  desc: 'Classic plate reverb. Bright and smooth.' },
   'slapback':     { reverbMix: 10, reverbDecay: 8,  delayMix: 40, delayTime: 80,  delayFeedback: 10, desc: 'Quick single echo. Rockabilly, vintage keys.' },
-  'tape-delay':   { reverbMix: 15, reverbDecay: 15, delayMix: 35, delayTime: 375, delayFeedback: 45, desc: 'Warm repeating echoes like a tape machine.' },
+  'tape-delay':   { reverbMix: 15, reverbDecay: 15, delayMix: 0,  delayTime: 200, delayFeedback: 0,  tape: true, desc: 'Switches on the Tape Echo, with a little room.' },
   'ping-pong':    { reverbMix: 10, reverbDecay: 12, delayMix: 30, delayTime: 250, delayFeedback: 55, desc: 'Rhythmic bouncing echoes. Great for leads.' },
   'ambient':      { reverbMix: 50, reverbDecay: 55, delayMix: 25, delayTime: 500, delayFeedback: 40, desc: 'Lush wash of reverb and delay. Cinematic.' },
   '80s-shimmer':  { reverbMix: 45, reverbDecay: 40, delayMix: 20, delayTime: 440, delayFeedback: 35, desc: 'The iconic 80s sound. Big reverb, rhythmic delay.' },
@@ -183,8 +274,10 @@ function setupFx() {
     const preset = FX_PRESETS[this.value];
     if (!preset) return;
     for (const [k, v] of Object.entries(preset)) {
-      if (k !== 'desc') updateFx(k, v);
+      if (k !== 'desc' && k !== 'tape') updateFx(k, v);
     }
+    // Only Tape Delay and Dry touch the tape echo; it is its own unit otherwise.
+    if (preset.tape !== undefined) setTapeOn(preset.tape);
     $('fx-desc').textContent = preset.desc;
   });
 }
@@ -376,7 +469,11 @@ function setupDamper() {
     pedal.setAttribute('aria-pressed', String(down));
     sendMidi(0xB0, DAMPER_CC, down ? 127 : 0);
   }
-  async function press(v) { if (v) await ensureAudio(); held = v; apply(); }
+  // Record the state before waiting on the audio, not after. The other way
+  // round, a release that arrived while the engine was starting found the
+  // pedal already up and did nothing, and then the late press put it down and
+  // left it there: a stuck damper from one quick tap.
+  async function press(v) { held = v; if (v) await ensureAudio(); apply(); }
 
   pedal.addEventListener('pointerdown', async (e) => {
     // Press first. Capture is a convenience, so that sliding off the button
@@ -396,14 +493,24 @@ function setupDamper() {
   });
 
   // Space bar is the pedal, the way it is on every other keyboard instrument.
+  //
+  // It used to stand aside whenever a button had focus, so that Space would
+  // not also press the button. But you have to click something to start the
+  // audio at all, the pedal and the patch arrows are buttons, and a clicked
+  // button keeps focus: after the first click the space bar did nothing, and
+  // the pedal looked broken. Now Space is always the pedal, and the button's
+  // own Space activation is cancelled instead.
+  const typing = (t) => ['SELECT', 'INPUT', 'TEXTAREA'].includes(t.tagName);
   document.addEventListener('keydown', async (e) => {
-    if (e.code !== 'Space' || e.repeat) return;
-    if (['SELECT', 'INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+    if (e.code !== 'Space' || typing(e.target)) return;
     e.preventDefault();
+    if (e.repeat) return;
     await press(true);
   });
   document.addEventListener('keyup', (e) => {
-    if (e.code === 'Space') press(false);
+    if (e.code !== 'Space' || typing(e.target)) return;
+    e.preventDefault();
+    press(false);
   });
 }
 
@@ -523,15 +630,37 @@ function setupUi() {
       reverbGain?.gain.setValueAtTime(0, now);
       delayGain?.gain.setValueAtTime(0, now);
       delayFbNode?.gain.setValueAtTime(0, now);
+      if (tape) { tape.fb.gain.cancelScheduledValues(now); tape.fb.gain.setValueAtTime(0, now);
+                  tape.out.gain.cancelScheduledValues(now); tape.out.gain.setValueAtTime(0, now); }
       setTimeout(() => {
         const t = audioCtx.currentTime;
         dryGain?.gain.setValueAtTime(1.0, t);
         reverbGain?.gain.setValueAtTime(fxState.reverbMix / 100, t);
         delayGain?.gain.setValueAtTime(fxState.delayMix / 100, t);
         delayFbNode?.gain.setValueAtTime(Math.min(0.85, fxState.delayFeedback / 100), t);
+        applyTape(tape, true);
       }, 200);
     }
   });
+
+  $('tape-btn').addEventListener('click', async () => {
+    if (!tapeState.on) await ensureAudio();
+    setTapeOn(!tapeState.on);
+  });
+
+  // The chord helper is for learning; some players only want the instrument.
+  const chordPanel = document.querySelector('.chord-panel');
+  const chordToggle = $('chord-toggle');
+  const showChords = (show) => {
+    chordPanel.classList.toggle('collapsed', !show);
+    chordToggle.textContent = show ? 'HIDE' : 'SHOW';
+    chordToggle.setAttribute('aria-expanded', String(show));
+    try { localStorage.setItem('openmk.chords', show ? 'on' : 'off'); } catch { /* private mode */ }
+  };
+  let chordsStored = null;
+  try { chordsStored = localStorage.getItem('openmk.chords'); } catch { /* private mode */ }
+  showChords(chordsStored !== 'off');
+  chordToggle.addEventListener('click', () => showChords(chordPanel.classList.contains('collapsed')));
 
   $('chorus-btn').addEventListener('click', () => {
     chorusOn = !chorusOn;
@@ -555,6 +684,9 @@ function setupUi() {
       applyGain();
     } else if (el.id === 'chorus-rate' || el.id === 'chorus-depth') {
       sendChorus();
+    } else if (TAPE_KNOBS[el.id]) {
+      tapeState[TAPE_KNOBS[el.id]] = parseFloat(el.dataset.value);
+      applyTape();
     }
   });
 
@@ -608,6 +740,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       kbd.height = 200;
     }
   }
+  // webaudio-keyboard has a computer-key map of its own (Z S X D ... and
+  // Q 2 W 3 ..., from C1) that listens whenever the drawn keyboard has focus,
+  // and clicking a key gives it focus. From then on every letter played twice:
+  // our note, and another one or two octaves down from the widget. That is the
+  // stack of extra notes @Reaper10 saw. The page already has a key map, so the
+  // widget's is emptied; its key handlers stay attached and find nothing.
+  customElements.whenDefined('webaudio-keyboard').then(() => {
+    const kbd = $('keyboard');
+    kbd.keycodes1 = [];
+    kbd.keycodes2 = [];
+  });
   const waitKbd = setInterval(() => {
     if (customElements.get('webaudio-keyboard')) { clearInterval(waitKbd); resizeKbd(); }
   }, 50);

@@ -25,6 +25,19 @@ Plus the Space D stereo chorus (a BBD approximation, same as the rdpiano plugin)
 - **Damper**: hold the pedal in the left strip, or hold the space bar, or use a
   real sustain pedal. LOCK keeps it down.
 - **On-screen**: click the keyboard
+- **Tape Echo**: its own unit after the instrument. Time, Repeats, Mix, and
+  Wear, which adds the wow, flutter and darkening of an old machine. Switching
+  it off lets the echoes already on the tape die away. The Tape Delay preset
+  turns it on; Dry turns it off.
+- **Chord helper**: the Detected panel names the chord and key and suggests
+  where to go next. HIDE puts it away, and the page remembers.
+
+Clicking the drawn keyboard used to make every computer key play two notes:
+the keyboard widget has its own key map, and once it had focus it answered too,
+one to three octaves below ours. And the space bar stopped working as the
+damper after you clicked any button, which you have to do to start the audio.
+Both were found by [@Reaper10](https://github.com/Reaper10), and
+`tests/page_input.mjs` keeps them fixed.
 
 ### There are no wheels, and that is the hardware
 
