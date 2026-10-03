@@ -30,6 +30,7 @@ const PATCHES = [
 const WAVE_ROM_SIZE = 0x20000;
 const PROG_ROM_SIZE = 0x2000;
 const RENDER_CHUNK = 4096; // max source samples per process() call
+const TUNE_RANGE_CENTS = 100; // one semitone either way
 
 class EpProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -39,6 +40,13 @@ class EpProcessor extends AudioWorkletProcessor {
     this.romPtrs = {};   // romset key -> {ic5, ic6, ic7, ic18} pointers
     this.currentPatch = 8; // MK-80 Classic
     this.srcRate = 20000;
+
+    // Tuning. A multiplier on the resampling ratio, so it is varispeed: pitch
+    // and the emulator's own envelope timing move together, the way a tape
+    // machine's speed control does. It is applied to the output of the board and
+    // never reaches the board, which has no notion of pitch to be told about.
+    this.tuneTarget = 1;   // what the knob asked for
+    this.tuneMul = 1;      // where it has got to; glides so a turn does not zipper
 
     // resampler state
     this.phase = 1; // force an initial pull
@@ -62,6 +70,14 @@ class EpProcessor extends AudioWorkletProcessor {
       case 'midi':
         if (this.ready) this.wasm.ep_midi(msg.data[0], msg.data[1], msg.data[2]);
         break;
+      case 'tune': {
+        // cents, one semitone either way. Clamped here and not only in the UI:
+        // the worklet is the last thing between a message and the speaker, and
+        // a runaway ratio asks the board for thousands of samples a block.
+        const c = Math.max(-TUNE_RANGE_CENTS, Math.min(TUNE_RANGE_CENTS, Number(msg.cents) || 0));
+        this.tuneTarget = Math.pow(2, c / 1200);
+        break;
+      }
       case 'patch':
         if (this.ready) this.setPatch(msg.index);
         break;
@@ -155,7 +171,12 @@ class EpProcessor extends AudioWorkletProcessor {
     }
 
     const n = outL.length;
-    const ratio = this.srcRate / sampleRate;
+    // Glide toward the tuning the knob asked for. 0.2 per block closes 99% of a
+    // step in about 20 blocks, which is 50 ms at 48 kHz: fast enough to feel
+    // like turning a knob, slow enough that it does not click.
+    this.tuneMul += (this.tuneTarget - this.tuneMul) * 0.2;
+    if (Math.abs(this.tuneTarget - this.tuneMul) < 1e-9) this.tuneMul = this.tuneTarget;
+    const ratio = (this.srcRate / sampleRate) * this.tuneMul;
     const mode32 = this.srcRate === 32000 ? 1 : 0;
 
     // Count how many new source samples this block consumes, render them in

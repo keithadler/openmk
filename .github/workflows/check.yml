@@ -41,6 +41,28 @@ jobs:
       - name: Computer keys and space bar
         run: node tests/page_input.mjs
 
+      # The tuning knob is varispeed on the board's output. This drives the real
+      # process() with a stub that streams a clean 1 kHz tone, and measures the
+      # pitch that comes out.
+      - name: The tuning knob tunes
+        run: node tests/tune.mjs
+
+      # And it has to be able to fail. Take the multiplier out of the ratio, on a
+      # copy so the checkout stays clean, and require a red run.
+      - name: The tuning check can fail
+        run: |
+          cp js/ep-processor.js /tmp/ep-mutant.js
+          sed -i 's|(this.srcRate / sampleRate) \* this.tuneMul|(this.srcRate / sampleRate)|' /tmp/ep-mutant.js
+          if cmp -s js/ep-processor.js /tmp/ep-mutant.js; then
+            echo "::error::the mutation did not apply, so this step proves nothing"
+            exit 1
+          fi
+          if node tests/tune.mjs /tmp/ep-mutant.js; then
+            echo "::error::tuning test passed with the knob wired to nothing; it is vacuous"
+            exit 1
+          fi
+          echo "the test goes red when the knob does nothing, as it must"
+
       - name: No stale ROM fetch
         run: |
           if grep -rn 'githubusercontent\|rdpiano/master/roms' js/ index.html; then

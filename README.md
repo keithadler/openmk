@@ -24,6 +24,11 @@ Plus the Space D stereo chorus (a BBD approximation, same as the rdpiano plugin)
 - **Computer keys**: A-L rows play notes, Z-M row plays the lower octave
 - **Damper**: hold the pedal in the left strip, or hold the space bar, or use a
   real sustain pedal. LOCK keeps it down.
+- **Tune**: the knob beside Volume puts the whole instrument up to a semitone
+  sharp or flat, for the out-of-tune sound of a piano nobody has looked after.
+  Double-click it to come back to the instrument's own pitch. It is not
+  remembered between visits and turns amber whenever it is off pitch, so a
+  detuned piano is never a surprise.
 - **On-screen**: click the keyboard
 - **Tape Echo**: its own unit after the instrument. Time, Repeats, Mix, and
   Wear, which adds the wow, flutter and darkening of an old machine. Switching
@@ -63,6 +68,26 @@ Program change now comes through from a MIDI keyboard too, which the board
 always accepted and this page never sent it. And a demo file's CC 7 moves the
 master level instead of vanishing, which is why the Gymnopédie used to play
 without its dynamics.
+
+### What Tune is, and is not
+
+Tune is a speed control on the sound coming out of the emulator, not a command
+to the board, which has no notion of pitch to be given. So it behaves like the
+speed knob on a tape machine: pitch moves, and so does the timing of the
+instrument's own envelopes, by the same small amount. At a semitone that is
+about six percent, and it is audible as the decay being a touch quicker when
+sharp.
+
+Bending a note that is already sounding is a different thing and the wheels
+could not do it either. Tune is steady, so it is the same on every note.
+
+The worklet refuses anything past a semitone itself rather than trusting the
+page. A value large enough would make the resampling ratio infinite, and the
+loop that counts samples subtracts one from infinity forever, which would freeze
+the audio thread. `tests/tune.mjs` drives the real `process()` with a stub that
+streams a clean tone and measures the pitch that comes out, to a fraction of a
+cent, at both native rates. Eleven deliberate faults are all caught, including
+that one, which is caught by timing out.
 
 ## ROMs
 

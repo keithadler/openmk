@@ -46,6 +46,15 @@
               <div class="param-label">Volume</div>
             </div>
             <div class="param">
+              <!-- One semitone either way, 0 in the middle, double-click to
+                   return. Deliberately not remembered between visits: a piano
+                   that was left out of tune last week and says nothing about it
+                   is a trap, not a feature. -->
+              <div class="knob" id="tune-knob" data-min="-100" data-max="100" data-value="0" data-default="0" data-color="#fb4" data-size="48"
+                   title="Tuning, one semitone either way. Double-click to return to the instrument's own pitch."></div>
+              <div class="param-label" id="tune-label">Tune</div>
+            </div>
+            <div class="param">
               <div class="lcd small-lcd" id="rate-display">20 kHz</div>
               <div class="param-label">Native Rate</div>
             </div>

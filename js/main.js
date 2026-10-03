@@ -129,6 +129,7 @@ async function initAudioGraph() {
         engineReady = true;
         setPatch(currentPatch);
         sendChorus();
+        sendTune();   // the knob may have been turned before there was an engine
         setStatus('Engine running. Play something.');
         resolve();
       } else if (msg.type === 'error') {
@@ -384,6 +385,25 @@ function setPatch(index) {
   $('patch-name').textContent = PATCH_NAMES[currentPatch];
   $('rate-display').textContent = (PATCH_RATES[currentPatch] / 1000) + ' kHz';
   if (epNode) epNode.port.postMessage({ type: 'patch', index: currentPatch });
+}
+
+// Tuning. The worklet multiplies its resampling ratio by this, so it is varispeed
+// on the board's output and never something the board is told. It is not saved:
+// it starts at the instrument's own pitch every visit, and the label turns amber
+// whenever it is anywhere else so that being out of tune is always visible.
+function tuneCents() {
+  const v = Math.round(parseFloat($('tune-knob').dataset.value) || 0);
+  return Math.max(-100, Math.min(100, v));
+}
+function sendTune() {
+  if (epNode) epNode.port.postMessage({ type: 'tune', cents: tuneCents() });
+}
+function applyTune() {
+  const c = tuneCents();
+  const label = $('tune-label');
+  label.textContent = c === 0 ? 'Tune' : 'Tune ' + (c > 0 ? '+' : '') + c;
+  label.classList.toggle('off-pitch', c !== 0);
+  sendTune();
 }
 
 function sendChorus() {
@@ -682,6 +702,8 @@ function setupUi() {
     if (!el.classList || !el.classList.contains('knob')) return;
     if (el.id === 'volume-knob') {
       applyGain();
+    } else if (el.id === 'tune-knob') {
+      applyTune();
     } else if (el.id === 'chorus-rate' || el.id === 'chorus-depth') {
       sendChorus();
     } else if (TAPE_KNOBS[el.id]) {

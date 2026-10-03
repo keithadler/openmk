@@ -258,6 +258,7 @@ body {
   line-height: 1.2;
   letter-spacing: 0.5px;
 }
+.param-label.off-pitch { color: #fb4; }
 .spacer { width: 8px; }
 
 /* ── SVG Knobs ── */
